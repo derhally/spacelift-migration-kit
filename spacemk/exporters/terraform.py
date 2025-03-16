@@ -162,8 +162,8 @@ class TerraformExporter(BaseExporter):
         """Check if the exporter requirements are met"""
         logging.info("Start checking requirements")
 
-        if not is_command_available(["docker", "ps"], execute=True):
-            logging.warning("Docker is not available. Sensitive variables will not be retrieved.")
+        if not is_command_available(["docker", "ps"], execute=True) and not is_command_available(["podman", "ps"], execute=True):
+            logging.warning("Both Docker and Podman are not available. Sensitive variables will not be retrieved.")
 
             click.confirm("Do you want to continue?", abort=True)
 
@@ -346,8 +346,8 @@ class TerraformExporter(BaseExporter):
                 }
             )
 
-        if not is_command_available(["docker", "ps"], execute=True):
-            logging.warning("Docker is not available. Skipping enriching workspace variables data.")
+        if not is_command_available(["docker", "ps"], execute=True) and not is_command_available(["podman", "ps"], execute=True):
+            logging.warning("Both Docker and Podman are not available. Skipping enriching workspace variables data.")
             return data
 
         if not click.confirm("Spacelift will temporarily change your workspaces to use a local agent in order "
@@ -602,8 +602,8 @@ class TerraformExporter(BaseExporter):
 
             return None
 
-        if not is_command_available(["docker", "ps"], execute=True):
-            logging.warning("Docker is not available. Skipping enriching workspace variables data.")
+        if not is_command_available(["docker", "ps"], execute=True) and not is_command_available(["podman", "ps"], execute=True):
+            logging.warning("Both Docker and Podman are not available. Skipping enriching workspace variables data.")
             return data
 
         if not click.confirm("Spacelift will temporarily change your workspaces to use a local agent in order "

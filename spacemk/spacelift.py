@@ -249,6 +249,7 @@ class Spacelift:
                 else:
                     plain_mounted_file_content += new_line
 
+            logging.info(f"Replacing vars with invalid names for stack '{stack.get('slug')}'")
             self._set_mounted_file_content(
                 content=plain_mounted_file_content,
                 filename=os.path.normpath(
@@ -257,6 +258,7 @@ class Spacelift:
                 stack_id=stack.get("slug"),
             )
 
+            logging.info(f"Replacing secrets with invalid names for stack '{stack.get('slug')}'")
             self._set_mounted_file_content(
                 content=secret_mounted_file_content,
                 filename=os.path.normpath(

@@ -1318,6 +1318,8 @@ class TerraformExporter(BaseExporter):
 
         logging.info("Start mapping context variables data")
 
+        auto_fix_variable_names = self._config.get("auto_fix_variable_names", False)
+
         prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
         data = []
         for variable in src_data.get("variable_set_variables"):
@@ -1360,6 +1362,7 @@ class TerraformExporter(BaseExporter):
                             "description": variable.get("attributes.description"),
                             "hcl": variable.get("attributes.hcl"),
                             "name": variable.get("attributes.key"),
+                            "replacement_name" : variable.get("attributes.key").replace("-", "_") if auto_fix_variable_names and not is_name_valid  else variable.get("attributes.key"),
                             "type": "terraform" if variable.get("attributes.category") == "terraform" else "env_var",
                             "valid_name": is_name_valid,
                             "value": variable.get("attributes.value"),
@@ -1386,6 +1389,7 @@ class TerraformExporter(BaseExporter):
                         "description": variable.get("attributes.description"),
                         "hcl": variable.get("attributes.hcl"),
                         "name": variable.get("attributes.key"),
+                        "replacement_name" : variable.get("attributes.key").replace("-", "_") if auto_fix_variable_names and not is_name_valid  else variable.get("attributes.key"),
                         "type": "terraform" if variable.get("attributes.category") == "terraform" else "env_var",
                         "valid_name": is_name_valid,
                         "value": variable.get("attributes.value"),
@@ -1573,6 +1577,7 @@ class TerraformExporter(BaseExporter):
 
         logging.info("Start mapping stack variables data")
 
+        auto_fix_variable_names = self._config.get("auto_fix_variable_names", False)
         prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
         data = []
         for variable in src_data.get("workspace_variables"):
@@ -1598,6 +1603,7 @@ class TerraformExporter(BaseExporter):
                     "description": variable.get("attributes.description"),
                     "hcl": variable.get("attributes.hcl"),
                     "name": variable.get("attributes.key"),
+                    "replacement_name" : variable.get("attributes.key").replace("-", "_") if auto_fix_variable_names and not is_name_valid  else variable.get("attributes.key"),
                     "type": "terraform" if variable.get("attributes.category") == "terraform" else "env_var",
                     "valid_name": is_name_valid,
                     "value": variable.get("attributes.value"),
@@ -1679,6 +1685,8 @@ class TerraformExporter(BaseExporter):
             secret_variables_with_invalid_name = find_workspace_variable_with_invalid_name(
                 data=src_data, type_="secret", workspace_id=workspace.get("id")
             )
+            
+            auto_fix_variable_names = self._config.get("auto_fix_variable_names", False)
 
             vcs_info = self._determine_provider(workspace)
             vcs_namespace = vcs_info.get("vcs_namespace")
@@ -1702,14 +1710,15 @@ class TerraformExporter(BaseExporter):
             else:
                 space_id = workspace.get("relationships.organization.data.id")
 
+
             data.append(
                 {
                     "_relationships": {"space": space_id},
                     "_source_id": workspace.get("id"),
                     "autodeploy": workspace.get("attributes.auto-apply"),
                     "description": workspace.get("attributes.description"),
-                    "has_variables_with_invalid_name": len(variables_with_invalid_name) > 0,
-                    "has_secret_variables_with_invalid_name": len(secret_variables_with_invalid_name) > 0,
+                    "has_variables_with_invalid_name": len(variables_with_invalid_name) > 0 and not auto_fix_variable_names,
+                    "has_secret_variables_with_invalid_name": len(secret_variables_with_invalid_name) > 0 and not auto_fix_variable_names,
                     "name": workspace.get("attributes.name"),
                     "labels": workspace.get("attributes.tag-names") if workspace.get("attributes.tag-names") is not None else [],
                     "slug": self._build_stack_slug(workspace),

@@ -49,31 +49,23 @@ resource "spacelift_mounted_file" "{{ stack._relationships.space._migration_id }
 
 {% block stack_variables %}
 {% for variable in stack_variables %}
-{% if variable._relationships.stack.vcs.repository and variable.valid_name %}
+{% if variable._relationships.stack.vcs.repository %}
 resource "spacelift_environment_variable" "{{ variable._relationships.space._migration_id }}_{{ variable._relationships.stack._migration_id }}_{{ variable._migration_id }}" {
   {% if variable.type == "terraform" %}
-    {{ argument("name", "TF_VAR_" ~ variable.name, required=True) }}
+    {{ argument("name", "TF_VAR_" ~ variable.replacement_name, required=True) }}
   {% else %}
-    {{ argument("name", variable.name, required=True) }}
+    {{ argument("name", variable.replacement_name, required=True) }}
   {% endif %}
 
   {{ argument("stack_id", "data.spacelift_stack." ~ variable._relationships.space._migration_id ~ "_" ~ variable._relationships.stack._migration_id ~ ".id", serialize=False) }}
-  {% if not variable.write_only %}
-    {% if variable.hcl %}
-    {{ argument("value", "jsonencode(" ~ variable.value ~ ")", serialize=False) }}
-    {% elif variable.value and "\n" in variable.value %}
-    {{ argument("value", "jsonencode(\"" ~ variable.value|replace("\n", "\\n") ~ "\")", serialize=False) }}
-    {% else %}
-    {{ argument("value", variable.value) }}
-    {% endif %}
+  {% if variable.hcl %}
+  {{ argument("value", "jsonencode(" ~ variable.value ~ ")", serialize=False) }}
+  {% elif variable.value and "\n" in variable.value %}
+  {{ argument("value", "jsonencode(\"" ~ variable.value|replace("\n", "\\n") ~ "\")", serialize=False) }}
+  {% else %}
+  {{ argument("value", variable.value) }}
   {% endif %}
   {{ argument("write_only", variable.write_only, default=True) }}
-
-  {% if variable.write_only %}
-  lifecycle {
-    {{ argument("ignore_changes", "[value]", serialize=False) }}
-  }
-  {% endif %}
 
   {% block stack_variable_arguments_extra scoped %}{% endblock %}
 }

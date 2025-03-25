@@ -162,8 +162,8 @@ class TerraformExporter(BaseExporter):
         """Check if the exporter requirements are met"""
         logging.info("Start checking requirements")
 
-        if not is_command_available(["docker", "ps"], execute=True):
-            logging.warning("Docker is not available. Sensitive variables will not be retrieved.")
+        if not is_command_available(["docker", "ps"], execute=True) and not is_command_available(["podman", "ps"], execute=True):
+            logging.warning("Both Docker and Podman are not available. Sensitive variables will not be retrieved.")
 
             click.confirm("Do you want to continue?", abort=True)
 
@@ -346,8 +346,8 @@ class TerraformExporter(BaseExporter):
                 }
             )
 
-        if not is_command_available(["docker", "ps"], execute=True):
-            logging.warning("Docker is not available. Skipping enriching workspace variables data.")
+        if not is_command_available(["docker", "ps"], execute=True) and not is_command_available(["podman", "ps"], execute=True):
+            logging.warning("Both Docker and Podman are not available. Skipping enriching workspace variables data.")
             return data
 
         if not click.confirm("Spacelift will temporarily change your workspaces to use a local agent in order "
@@ -602,8 +602,8 @@ class TerraformExporter(BaseExporter):
 
             return None
 
-        if not is_command_available(["docker", "ps"], execute=True):
-            logging.warning("Docker is not available. Skipping enriching workspace variables data.")
+        if not is_command_available(["docker", "ps"], execute=True) and not is_command_available(["podman", "ps"], execute=True):
+            logging.warning("Both Docker and Podman are not available. Skipping enriching workspace variables data.")
             return data
 
         if not click.confirm("Spacelift will temporarily change your workspaces to use a local agent in order "
@@ -1187,7 +1187,7 @@ class TerraformExporter(BaseExporter):
         return data
 
     def _extract_workspace_variables_data(self, workspace: dict) -> list[dict]:
-        logging.info("Start extracting workspace variables data")
+        logging.info(f"Start extracting workspace {workspace.get('attributes.name')} variables data")
 
         properties = [
             "attributes.category",
@@ -1228,20 +1228,38 @@ class TerraformExporter(BaseExporter):
             "relationships.organization.data.id",
             "relationships.project.data.id",
         ]
+        
+        filter_list = False
+        workspace_filter = self._config.get("include.workspaces")
+        if isinstance(workspace_filter, str):
+            include_pattern = workspace_filter
+        elif isinstance(workspace_filter, list):
+            filter_list = True
+            include_pattern = ".*"
+        else:
+            include_pattern = ".*"
+            
         data = self._extract_data_from_api(
-            include_pattern=self._config.get("include.workspaces"),
+            include_pattern=include_pattern,
             path=f"/organizations/{organization.get('id')}/workspaces",
             properties=properties,
         )
+        
+        if filter_list:
+            data = [workspace for workspace in data if workspace.get("attributes.name") in workspace_filter]
 
         # Get tag names for every stack and update the benedict with those tag names.
         for i in data:
+            if filter_list:
+                if i.get("attributes.name") not in workspace_filter:
+                    continue
+
             additional_properties = [
                 "attributes.tag-names"
             ]
 
             additional_data = self._extract_data_from_api(
-                include_pattern=self._config.get("include.workspaces"),
+                include_pattern=include_pattern,
                 path=f"/workspaces/{i.get('id')}",
                 properties=additional_properties,
             )
@@ -1300,6 +1318,8 @@ class TerraformExporter(BaseExporter):
 
         logging.info("Start mapping context variables data")
 
+        auto_fix_variable_names = self._config.get("auto_fix_variable_names", False)
+
         prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
         data = []
         for variable in src_data.get("variable_set_variables"):
@@ -1342,6 +1362,7 @@ class TerraformExporter(BaseExporter):
                             "description": variable.get("attributes.description"),
                             "hcl": variable.get("attributes.hcl"),
                             "name": variable.get("attributes.key"),
+                            "replacement_name" : variable.get("attributes.key").replace("-", "_") if auto_fix_variable_names and not is_name_valid  else variable.get("attributes.key"),
                             "type": "terraform" if variable.get("attributes.category") == "terraform" else "env_var",
                             "valid_name": is_name_valid,
                             "value": variable.get("attributes.value"),
@@ -1368,6 +1389,7 @@ class TerraformExporter(BaseExporter):
                         "description": variable.get("attributes.description"),
                         "hcl": variable.get("attributes.hcl"),
                         "name": variable.get("attributes.key"),
+                        "replacement_name" : variable.get("attributes.key").replace("-", "_") if auto_fix_variable_names and not is_name_valid  else variable.get("attributes.key"),
                         "type": "terraform" if variable.get("attributes.category") == "terraform" else "env_var",
                         "valid_name": is_name_valid,
                         "value": variable.get("attributes.value"),
@@ -1555,6 +1577,7 @@ class TerraformExporter(BaseExporter):
 
         logging.info("Start mapping stack variables data")
 
+        auto_fix_variable_names = self._config.get("auto_fix_variable_names", False)
         prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
         data = []
         for variable in src_data.get("workspace_variables"):
@@ -1580,6 +1603,7 @@ class TerraformExporter(BaseExporter):
                     "description": variable.get("attributes.description"),
                     "hcl": variable.get("attributes.hcl"),
                     "name": variable.get("attributes.key"),
+                    "replacement_name" : variable.get("attributes.key").replace("-", "_") if auto_fix_variable_names and not is_name_valid  else variable.get("attributes.key"),
                     "type": "terraform" if variable.get("attributes.category") == "terraform" else "env_var",
                     "valid_name": is_name_valid,
                     "value": variable.get("attributes.value"),
@@ -1661,6 +1685,8 @@ class TerraformExporter(BaseExporter):
             secret_variables_with_invalid_name = find_workspace_variable_with_invalid_name(
                 data=src_data, type_="secret", workspace_id=workspace.get("id")
             )
+            
+            auto_fix_variable_names = self._config.get("auto_fix_variable_names", False)
 
             vcs_info = self._determine_provider(workspace)
             vcs_namespace = vcs_info.get("vcs_namespace")
@@ -1684,16 +1710,17 @@ class TerraformExporter(BaseExporter):
             else:
                 space_id = workspace.get("relationships.organization.data.id")
 
+
             data.append(
                 {
                     "_relationships": {"space": space_id},
                     "_source_id": workspace.get("id"),
                     "autodeploy": workspace.get("attributes.auto-apply"),
                     "description": workspace.get("attributes.description"),
-                    "has_variables_with_invalid_name": len(variables_with_invalid_name) > 0,
-                    "has_secret_variables_with_invalid_name": len(secret_variables_with_invalid_name) > 0,
+                    "has_variables_with_invalid_name": len(variables_with_invalid_name) > 0 and not auto_fix_variable_names,
+                    "has_secret_variables_with_invalid_name": len(secret_variables_with_invalid_name) > 0 and not auto_fix_variable_names,
                     "name": workspace.get("attributes.name"),
-                    "labels": workspace.get("attributes.tag-names"),
+                    "labels": workspace.get("attributes.tag-names") if workspace.get("attributes.tag-names") is not None else [],
                     "slug": self._build_stack_slug(workspace),
                     "terraform": {
                         "version": terraform_version,
@@ -1775,7 +1802,7 @@ class TerraformExporter(BaseExporter):
             },
             image=self._config.get("agent_image", "ghcr.io/spacelift-io/spacelift-migration-kit:latest"),
             name=container_name,
-            pull="always",
+            pull="never",
             remove=True,
             volumes=[("/tmp/spacelift-migration-kit", "/mnt/spacelift-migration-kit")]
         )

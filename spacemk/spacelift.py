@@ -227,6 +227,7 @@ class Spacelift:
         env_vars = self._get_sensitive_env_vars()
         for env_var in env_vars:
             if env_var.get("value"):
+                logging.info(f"Setting sensitive environment variable '{env_var.get('name')}' for stack '{env_var.get('_relationships.stack.slug')}'")
                 self._set_sensitive_env_var(env_var)
             else:
                 logging.debug(
@@ -249,6 +250,7 @@ class Spacelift:
                 else:
                     plain_mounted_file_content += new_line
 
+            logging.info(f"Replacing vars with invalid names for stack '{stack.get('slug')}'")
             self._set_mounted_file_content(
                 content=plain_mounted_file_content,
                 filename=os.path.normpath(
@@ -257,6 +259,7 @@ class Spacelift:
                 stack_id=stack.get("slug"),
             )
 
+            logging.info(f"Replacing secrets with invalid names for stack '{stack.get('slug')}'")
             self._set_mounted_file_content(
                 content=secret_mounted_file_content,
                 filename=os.path.normpath(

@@ -74,3 +74,26 @@ resource "spacelift_environment_variable" "{{ variable._relationships.space._mig
 {% endfor %}
 
 {% endblock %}
+
+{% block modules %}
+{% for module in modules %}
+{% if module.status == "setup_complete" and module.visibility == "private" %}
+resource "spacelift_module" "{{ module._relationships.space._migration_id }}_{{ module._migration_id }}" {
+
+  {%  if  module.vcs.branch == ""%}
+  {{ argument("branch", generation_config.modules.default_branch, required=True) }}
+  {% else %}
+  {{ argument("branch", module.vcs.branch, required=True) }}
+  {% endif %}
+  {{ argument("name", module.name) }}
+  {{ argument("repository", module.vcs.repository, required=True) }}
+  {{ argument("terraform_provider", module.terraform_provider) }}
+  {% block module_arguments_extra scoped %}{% endblock %}
+
+  github_enterprise {
+    {{ argument("namespace", module.vcs.namespace) }}
+  }
+}
+{% endif %}
+{% endfor %}
+{% endblock %}

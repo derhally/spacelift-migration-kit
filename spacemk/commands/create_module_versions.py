@@ -4,13 +4,14 @@ import click
 import requests
 from click_help_colors import HelpColorsCommand
 from requests_toolbelt.utils import dump as request_dump
+from collections import OrderedDict
 
 from spacemk import load_normalized_data
 from spacemk.spacelift import Spacelift
 
 
 def _get_repository_tags(endpoint: str, github_api_token: str, namespace: str, repository: str) -> dict:
-    data = {}
+    data = OrderedDict()
 
     headers = {
         "Accept": "application/vnd.github+json",
@@ -59,9 +60,9 @@ def create_module_versions(config):
             repository=module.get("vcs.repository"),
         )
 
-        for tag, commit_sha in tags.items():
+        for tag, commit_sha in reversed(tags.items()):
             spacelift.create_module_version(
                 commit_sha=commit_sha,
-                module=module.get("name"),
+                module=module.get("vcs.repository"),
                 version=tag,
             )

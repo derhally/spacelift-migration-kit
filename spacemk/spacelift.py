@@ -146,6 +146,8 @@ class Spacelift:
     def _get_module_versions(self, module: str) -> list:
         versions = {}
 
+        logging.info(f"Getting versions for module '{module}'")
+        
         operation = """
           query GetModuleVersions($moduleId: ID!, $before: ID, $includeFailed: Boolean) {
             module(id: $moduleId) {
@@ -166,6 +168,8 @@ class Spacelift:
         }
 
         response = self.call_api(operation=operation, variables=variables)
+
+        logging.info(json.dumps(response, indent=2))
         for version in response.get("data.module.versions"):
             versions[version["number"]] = version["commit"]["hash"]
 

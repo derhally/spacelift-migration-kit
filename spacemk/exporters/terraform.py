@@ -1230,14 +1230,28 @@ class TerraformExporter(BaseExporter):
         ]
         
         filter_list = False
-        workspace_filter = self._config.get("include.workspaces")
-        if isinstance(workspace_filter, str):
-            include_pattern = workspace_filter
-        elif isinstance(workspace_filter, list):
+        workspace_list = self._config.get("include.workspace_list")
+        if workspace_list:
             filter_list = True
-            include_pattern = ".*"
+            workspace_filter = []
+            try:
+                with open(workspace_list, 'r') as file:
+                    lines = file.read().splitlines()
+                    workspace_filter = [line.strip() for line in lines if line.strip()]
+                logging.info(f"Loaded {len(workspace_filter)} workspaces from {workspace_list}")
+                include_pattern = ".*"
+            except Exception as e:
+                logging.error(f"Failed to read workspace list file {workspace_list}: {e}")
+                raise click.Abort()
         else:
-            include_pattern = ".*"
+            workspace_filter = self._config.get("include.workspaces")
+            if isinstance(workspace_filter, str):
+                include_pattern = workspace_filter
+            elif isinstance(workspace_filter, list):
+                filter_list = True
+                include_pattern = ".*"
+            else:
+                include_pattern = ".*"
             
         data = self._extract_data_from_api(
             include_pattern=include_pattern,

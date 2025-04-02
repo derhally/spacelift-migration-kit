@@ -78,7 +78,8 @@ resource "spacelift_environment_variable" "{{ variable._relationships.space._mig
 {% block modules %}
 {% for module in modules %}
 {% if module.status == "setup_complete" and module.visibility == "private" %}
-resource "spacelift_module" "{{ module._relationships.space._migration_id }}_{{ module._migration_id }}" {
+
+resource "spacelift_module" "{{ module._relationships.space._migration_id }}_{{ module._migration_id }}_{{ module.terraform_provider }}" {
 
   {%  if  module.vcs.branch == ""%}
   {{ argument("branch", generation_config.modules.default_branch, required=True) }}
@@ -94,6 +95,7 @@ resource "spacelift_module" "{{ module._relationships.space._migration_id }}_{{ 
     {{ argument("namespace", module.vcs.namespace) }}
   }
 }
+
 {% endif %}
 {% endfor %}
 {% endblock %}

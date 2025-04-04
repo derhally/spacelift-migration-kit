@@ -945,6 +945,11 @@ class TerraformExporter(BaseExporter):
         return data
 
     def _extract_agent_pools_data(self, organization: dict) -> list[dict]:
+        agent_pools_filter = self._config.get("include.agent_pools")
+        if agent_pools_filter == "none":
+            logging.info("Skipping agent pools data extraction")
+            return []
+
         logging.info("Start extracting agent pools data")
 
         properties = [
@@ -1017,6 +1022,12 @@ class TerraformExporter(BaseExporter):
         return data
 
     def _extract_policies_data(self, organization: dict) -> list[dict]:
+        
+        policies_filter = self._config.get("include.policies")
+        if policies_filter == "none":
+            logging.info("Skipping policies data extraction")
+            return []
+        
         logging.info("Start extracting policies data")
 
         properties = [
@@ -1060,6 +1071,12 @@ class TerraformExporter(BaseExporter):
         return data
 
     def _extract_projects_data(self, organization: dict) -> list[dict]:
+        
+        projects_filter = self._config.get("include.projects")
+        if projects_filter == "none":
+            logging.info("Skipping projects data extraction")
+            return []
+        
         logging.info("Start extracting projects data")
 
         properties = [
@@ -1098,6 +1115,12 @@ class TerraformExporter(BaseExporter):
         return data
 
     def _extract_tasks_data(self, organization: dict) -> list[dict]:
+        
+        tasks_filter = self._config.get("include.tasks")
+        if tasks_filter == "none":
+            logging.info("Skipping tasks data extraction")
+            return []
+        
         logging.info("Start extracting tasks data")
 
         properties = [
@@ -1120,6 +1143,12 @@ class TerraformExporter(BaseExporter):
         return data
 
     def _extract_teams_data(self, organization: dict) -> list[dict]:
+        
+        teams_filter = self._config.get("include.teams")
+        if teams_filter == "none":
+            logging.info("Skipping teams data extraction")
+            return []
+
         logging.info("Start extracting teams data")
 
         properties = [

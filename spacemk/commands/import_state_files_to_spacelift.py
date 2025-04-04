@@ -189,7 +189,7 @@ def import_state_files_to_spacelift(config):
     spacelift = Spacelift(config.get("spacelift"))
 
     # We only want to create a context for the spaces that are referenced in the stacks
-    space_ids = {}
+    space_ids = set()
     for stack in data.get("stacks"):
         stack = _get_stack(spacelift=spacelift, stack_id=stack.slug)
         if stack is None:

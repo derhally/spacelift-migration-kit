@@ -159,6 +159,21 @@ query GetSpaces {
 
     return [space.id for space in response.get("data.spaces")]
 
+def _get_stack(spacelift: Spacelift, stack_id: str) -> list:
+    query = """
+query GetStack($id: ID!) {
+  stack(id: $id) {
+    id
+		name
+		space
+  }
+}
+"""
+
+    response = spacelift.call_api(operation=query, variables={"id": stack_id})
+
+    return response.get("data.stack")
+
 
 def _trigger_task(spacelift: Spacelift, stack_id: str, workspace_id: str) -> None:
     logging.info(f"Triggering task for stack '{stack_id}'")
@@ -172,7 +187,15 @@ def _trigger_task(spacelift: Spacelift, stack_id: str, workspace_id: str) -> Non
 def import_state_files_to_spacelift(config):
     data = load_normalized_data()
     spacelift = Spacelift(config.get("spacelift"))
-    space_ids = _get_space_ids(spacelift=spacelift)
+
+    # We only want to create a context for the spaces that are referenced in the stacks
+    space_ids = {}
+    for stack in data.get("stacks"):
+        stack = _get_stack(spacelift=spacelift, stack_id=stack.slug)
+        if stack is None:
+            logging.Error(f"Stack '{stack.slug}' not found in Spacelift.")
+            raise click.Abort()
+        space_ids.add(stack.space)
 
     api_endpoint = config.exporter.settings.api_endpoint
     if api_endpoint is None:

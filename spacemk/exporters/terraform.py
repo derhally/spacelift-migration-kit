@@ -1744,7 +1744,7 @@ class TerraformExporter(BaseExporter):
             elif (terraform_version.startswith("~")
                   or terraform_version.startswith("^")
                   or semver.match(terraform_version, ">1.5.7")):
-                terraform_workflow_tool = "CUSTOM"
+                terraform_workflow_tool = "OPEN_TOFU"
             else:
                 terraform_workflow_tool = "TERRAFORM_FOSS"
 

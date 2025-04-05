@@ -11,7 +11,7 @@ provider "spacelift" {
 
 {% block stacks %}
 {% for stack in stacks %}
-data "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ stack._migration_id }}" {
+data "spacelift_stack" "{{ stack._migration_id }}" {
   {{ argument("stack_id", stack.name, required=True) }}
 }
 
@@ -20,7 +20,7 @@ resource "spacelift_mounted_file" "{{ stack._relationships.space._migration_id }
   {# The content will be uploaded at a later time to avoid having it in the Terraform code#}
   {{ argument("content", 'base64encode("placeholder = \\"placeholder\\"")', serialize=False) }}
   {{ argument("relative_path", ("source/" ~ stack.vcs.project_root ~ "/tf_vars_with_invalid_name.auto.tfvars")|normalizepath) }}
-  {{ argument("stack_id", "data.spacelift_stack." ~ stack._relationships.space._migration_id ~ "_" ~ stack._migration_id ~ ".id", serialize=False) }}
+  {{ argument("stack_id", "data.spacelift_stack." ~ stack._migration_id ~ ".id", serialize=False) }}
   {{ argument("write_only", false) }}
 
   lifecycle {
@@ -34,7 +34,7 @@ resource "spacelift_mounted_file" "{{ stack._relationships.space._migration_id }
   {# The content will be uploaded at a later time to avoid having it in the Terraform code#}
   {{ argument("content", 'base64encode("placeholder = \\"placeholder\\"")', serialize=False) }}
   {{ argument("relative_path", ("source/" ~ stack.vcs.project_root ~ "/tf_secret_vars_with_invalid_name.auto.tfvars")|normalizepath) }}
-  {{ argument("stack_id", "data.spacelift_stack." ~ stack._relationships.space._migration_id ~ "_" ~ stack._migration_id ~ ".id", serialize=False) }}
+  {{ argument("stack_id", "data.spacelift_stack." ~ stack._migration_id ~ ".id", serialize=False) }}
   {{ argument("write_only", true) }}
 
   lifecycle {
@@ -50,14 +50,14 @@ resource "spacelift_mounted_file" "{{ stack._relationships.space._migration_id }
 {% block stack_variables %}
 {% for variable in stack_variables %}
 {% if variable._relationships.stack.vcs.repository %}
-resource "spacelift_environment_variable" "{{ variable._relationships.space._migration_id }}_{{ variable._relationships.stack._migration_id }}_{{ variable._migration_id }}" {
+resource "spacelift_environment_variable" "{{ variable._relationships.stack._migration_id }}_{{ variable._migration_id }}" {
   {% if variable.type == "terraform" %}
     {{ argument("name", "TF_VAR_" ~ variable.replacement_name, required=True) }}
   {% else %}
     {{ argument("name", variable.replacement_name, required=True) }}
   {% endif %}
 
-  {{ argument("stack_id", "data.spacelift_stack." ~ variable._relationships.space._migration_id ~ "_" ~ variable._relationships.stack._migration_id ~ ".id", serialize=False) }}
+  {{ argument("stack_id", "data.spacelift_stack." ~ variable._relationships.stack._migration_id ~ ".id", serialize=False) }}
   {% if variable.hcl %}
   {{ argument("value", "jsonencode(" ~ variable.value ~ ")", serialize=False) }}
   {% elif variable.value and "\n" in variable.value %}
